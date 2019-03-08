@@ -31,12 +31,14 @@ public class SpinLockHashMapMgr
      * critical section.
      */
     // TODO -- you fill in here.
+    private CancellableLock lock;
 
     /**
      * A counting Semaphore that limits concurrent access to the fixed
      * number of available palantiri managed by the PalantiriManager.
      */
     // TODO -- you fill in here.
+    private Semaphore semaphore;
 
     /**
      * @return The "spin lock" instance.
@@ -44,7 +46,7 @@ public class SpinLockHashMapMgr
     public CancellableLock getSpinLock() {
         // TODO -- you fill in here, replacing null with the proper
         // code.
-        return null;
+        return lock;
     }
 
     /**
@@ -53,7 +55,7 @@ public class SpinLockHashMapMgr
     public Semaphore getAvailablePalantiri() {
         // TODO -- you fill in here, replacing null with the proper
         // code.
-        return null;
+        return semaphore;
     }
 
     /**
@@ -62,7 +64,7 @@ public class SpinLockHashMapMgr
     public HashMap<Palantir, Boolean> getPalantiriMap() {
         // TODO -- you fill in here, replacing null with the proper
         // code.
-        return null;
+        return mPalantiriMap;
     }
 
     /**
@@ -78,10 +80,14 @@ public class SpinLockHashMapMgr
         // getPalantiri() factory method and initialize each key in
         // the mPalantiriMap with "true" to indicate it's available.
         // TODO -- you fill in here.
+        for (Palantir p : getPalantiri()) {
+            mPalantiriMap.put(p, true);
+        }
 
         // Initialize the Semaphore to use a "fair" implementation
         // that mediates concurrent access to the given Palantiri.
         // TODO -- you fill in here.
+        semaphore = new Semaphore(getPalantirCount(), true);
 
         if (Assignment.isUndergraduateTodo()) {
             // UNDERGRADUATES:
@@ -92,7 +98,8 @@ public class SpinLockHashMapMgr
             // NOTE: You also will need to set the assignment type
             // to UNDERGRADUATE in the edu.vandy.simulator.utils.Assignment.
 
-            // TODO -- you fill in here.
+            // TODO -- you fill in here.\
+            lock = new SpinLock();
         } else if (Assignment.isGraduateTodo()) {
             // GRADUATES:
             //
@@ -103,6 +110,7 @@ public class SpinLockHashMapMgr
             // to GRADUATE in the edu.vandy.simulator.utils.Assignment.
 
             // TODO -- you fill in here.
+            lock = new ReentrantSpinLock();
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -125,6 +133,19 @@ public class SpinLockHashMapMgr
         // isn't available, return that palantir to the client, and
         // release the spin-lock.
         // TODO -- you fill in here.
+        semaphore.acquire();
+
+        try {
+            lock.lock(this::isCancelled);
+            for (Map.Entry<Palantir, Boolean> entry : mPalantiriMap.entrySet()) {
+                if (entry.getValue()) {
+                    entry.setValue(false);
+                    return entry.getKey();
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
 
         // This invariant should always hold for all acquire()
         // implementations if implemented correctly. That is the
@@ -150,6 +171,18 @@ public class SpinLockHashMapMgr
         // in a thread-safe manner and release the Semaphore if all
         // works properly.
         // TODO -- you fill in here.
+        if (palantir == null) {
+            return;
+        }
+
+        try {
+            lock.lock(this::isCancelled);
+            if (mPalantiriMap.put(palantir, true) != null) {
+                semaphore.release();
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -162,7 +195,7 @@ public class SpinLockHashMapMgr
     protected int availablePermits() {
         // TODO -- you fill in here, replacing -1 with the proper
         // code.
-        return -1;
+        return semaphore.availablePermits();
     }
 
     /**
@@ -172,5 +205,8 @@ public class SpinLockHashMapMgr
      */
     @Override
     public void shutdownNow() {
+        mPalantiriMap.clear();
+        semaphore = null;
+        lock = null;
     }
 }
