@@ -16,6 +16,7 @@ class SpinLock
      * "unlocked".
      */
     // TODO -- you fill in here.
+    private final AtomicBoolean owner = new AtomicBoolean(false);
 
     /**
      * @return The AtomicBoolean used for compare-and-swap.
@@ -23,7 +24,7 @@ class SpinLock
     public AtomicBoolean getOwner() {
         // TODO -- you fill in here, replacing null with the proper
         // code.
-        return null;
+        return owner;
     }
 
     /**
@@ -38,7 +39,7 @@ class SpinLock
         // current value is false.
         // TODO -- you fill in here, replacing false with the proper
         // code.
-        return false;
+        return owner.compareAndSet(false, true);
     }
 
     /**
@@ -60,6 +61,11 @@ class SpinLock
         // check if a shutdown has been requested and if so throw a
         // cancellation exception.
         // TODO -- you fill in here.
+        while (!owner.compareAndSet(false, true)) {
+            if (isCancelled.get()) {
+                throw new CancellationException();
+            }
+        }
     }
 
     /**
@@ -70,5 +76,6 @@ class SpinLock
         // Atomically release the lock that's currently held by
         // mOwner.
         // TODO -- you fill in here.
+        owner.set(false);
     }
 }
