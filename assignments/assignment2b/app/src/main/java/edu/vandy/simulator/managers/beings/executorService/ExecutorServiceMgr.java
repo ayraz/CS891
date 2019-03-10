@@ -2,9 +2,11 @@ package edu.vandy.simulator.managers.beings.executorService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import edu.vandy.simulator.Controller;
@@ -30,11 +32,13 @@ public class ExecutorServiceMgr
      * concurrently in the ExecutorService's thread pool.
      */
     // TODO -- you fill in here.
+    private List<Future<BeingCallable>> futures;
 
     /**
      * The ExecutorService contains a fixed pool of threads.
      */
     // TODO -- you fill in here.
+    private ExecutorService executor;
 
     /**
      * Default constructor.
@@ -62,7 +66,7 @@ public class ExecutorServiceMgr
         // Return a new BeingCallable instance.
         // TODO -- you fill in here, replacing null with the
         // appropriate code.
-        return null;
+        return new BeingCallable(this);
     }
 
     /**
@@ -75,24 +79,27 @@ public class ExecutorServiceMgr
         // a pool of threads that represent the beings in this
         // simulation.
         // TODO -- you fill in here.
+        beginBeingThreadPool();
 
         // Call a method that waits for all futures to complete.
         // TODO -- you fill in here.
+        awaitCompletionOfFutures();
 
         // Call this classes ExecutorServiceMgr shutdownNow() method
         // to cleanly shutdown the executor service.
         // TODO -- you fill in here.
+        shutdownNow();
     }
 
     /**
-     * Creates a fixed thread poll executor service.
+     * Creates a fixed thread pool executor service.
      *
      * @param size The number of threads in the thread pool
      * @return A fixed thread pool executor
      */
     ExecutorService createExecutorService(int size) {
         // TODO -- you fill in here (replace null with an executor service instance).
-        return null;
+        return Executors.newFixedThreadPool(size);
     }
 
     /**
@@ -108,6 +115,7 @@ public class ExecutorServiceMgr
         // ExecutorService, and add it to the list of BeingCallable
         // futures.
         // TODO -- you fill in here.
+        executor = createExecutorService(getBeingCount());
 
         // GRADUATE STUDENTS:
         // Use a Java 8 stream to submit each BeingCallable and
@@ -120,7 +128,11 @@ public class ExecutorServiceMgr
         // each being.
 
         if (Assignment.isUndergraduateTodo()) {
+
         } else if (Assignment.isGraduateTodo()) {
+            futures = getBeings().stream()
+                    .map(callable -> executor.submit(callable))
+                    .collect(toList());
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -144,13 +156,24 @@ public class ExecutorServiceMgr
         // Undergraduate students are free to use a Java 8 stream, but
         // it's not required.
 
-        // TODO -- you fill in here.
-
         // Keeps track of how many beings were processed.
         long beingCount = 0;
 
+        // TODO -- you fill in here.
+
         if (Assignment.isUndergraduateTodo()) {
-        } else if (Assignment.isGraduateTodo()) {
+
+        } else if (Assignment.isGraduateTodo())  {
+            for (Future<BeingCallable> f : futures) {
+                try {
+                    f.get();
+                    beingCount++;
+                } catch (ExecutionException e) {
+                    Controller.log(TAG + e.getMessage());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -180,9 +203,15 @@ public class ExecutorServiceMgr
         // futures, but only if they aren't already done or already
         // canceled.
         // TODO -- you fill in here.
+        futures.forEach(f -> {
+            if (!f.isDone() || f.isCancelled()) {
+                f.cancel(true);
+            }
+        });
 
         // Shutdown the executor *now*.
         // TODO -- you fill in here.
+        executor.shutdownNow();
 
         Controller.log(TAG + ": shutdownNow: exited with "
                 + getRunningBeingCount() + "/"

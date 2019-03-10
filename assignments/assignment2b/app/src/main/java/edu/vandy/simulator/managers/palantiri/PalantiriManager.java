@@ -106,7 +106,7 @@ public abstract class PalantiriManager
      * This method is just intended for use by the regression
      * tests, not by applications.
      *
-     * @return the number of available permits on the semaphore.
+     * @return the number of available mPermits on the semaphore.
      */
     protected abstract int availablePermits();
 

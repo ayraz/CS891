@@ -13,9 +13,11 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import edu.vandy.simulator.Controller;
 import edu.vandy.simulator.managers.palantiri.Palantir;
 import edu.vandy.simulator.managers.palantiri.PalantiriManager;
 import edu.vandy.simulator.utils.Assignment;
+import io.reactivex.internal.operators.completable.CompletableOnErrorComplete;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -44,11 +46,13 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
      * PalantiriManager.
      */
     // TODO -- you fill in here.
+    private SimpleSemaphore semaphore;
 
     /**
      * A Lock used to protect critical sections involving the HashMap.
      */
     // TODO -- you fill in here.
+    private ReentrantLock lock;
 
     /**
      * Resets the fields to their initial values
@@ -69,7 +73,7 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
     SimpleSemaphore getSemaphore() {
         // TODO -- you fill in here, replacing null with the
         // appropriate field.
-        return null;
+        return semaphore;
     }
 
     /**
@@ -101,6 +105,14 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
             // TODO -- you fill in here.
         } else if (Assignment.isGraduateTodo()) {
             // TODO -- you fill in here.
+            mPalantiriMap = new HashMap<>(getPalantirCount());
+            getPalantiri().forEach(palantir -> mPalantiriMap.put(palantir, true));
+
+            semaphore = new SimpleSemaphore(getPalantirCount());
+
+            lock = new ReentrantLock(false);
+
+            Controller.log(TAG + ": buildModel() called");
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -134,6 +146,22 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
             // TODO -- you fill in here.
         } else if (Assignment.isGraduateTodo()) {
             // TODO -- you fill in here.
+            Controller.log(TAG + ": try semaphore " + Thread.currentThread().getName());
+            semaphore.acquire();
+            Controller.log(TAG + ": acquire semaphore " + Thread.currentThread().getName());
+            try {
+                Controller.log(TAG + ": try lock " + Thread.currentThread().getName());
+                lock.lock();
+                Controller.log(TAG + ": acquire lock " + Thread.currentThread().getName());
+                Map.Entry<Palantir, Boolean> entry = mPalantiriMap.entrySet().stream()
+                        .filter(Map.Entry::getValue)
+                        .findAny()
+                        .get();
+                entry.setValue(false);
+                return entry.getKey();
+            } finally {
+                lock.unlock();
+            }
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -163,18 +191,30 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
         // in a thread-safe manner and release the SimpleSemaphore if
         // all works properly.
         // TODO -- you fill in here.
+        Controller.log(TAG + ": release a palantir");
+        if (palantir == null) {
+            return;
+        }
+        try {
+            lock.lock();
+            mPalantiriMap.put(palantir, true);
+            semaphore.release();
+            Controller.log(TAG + ": release semaphore " + Thread.currentThread().getName());
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
      * This method is just intended for use by the regression tests,
      * not by applications.
      *
-     * @return the number of available permits on the semaphore.
+     * @return the number of available mPermits on the semaphore.
      */
     @Override
     protected int availablePermits() {
         // TODO -- replace 0 with the appropriate method call.
-        return 0;
+        return semaphore.availablePermits();
     }
 
     /**
