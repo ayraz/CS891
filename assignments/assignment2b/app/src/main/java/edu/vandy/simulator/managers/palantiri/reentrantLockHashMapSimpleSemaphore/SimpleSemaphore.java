@@ -4,8 +4,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import kotlin.NotImplementedError;
-
 /**
  * This class defines a counting semaphore with "fair" semantics that
  * are implemented using a Java ReentrantLock and ConditionObject.

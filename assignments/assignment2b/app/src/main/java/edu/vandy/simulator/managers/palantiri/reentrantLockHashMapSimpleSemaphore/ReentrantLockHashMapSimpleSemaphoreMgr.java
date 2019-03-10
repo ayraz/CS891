@@ -107,12 +107,8 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
             // TODO -- you fill in here.
             mPalantiriMap = new HashMap<>(getPalantirCount());
             getPalantiri().forEach(palantir -> mPalantiriMap.put(palantir, true));
-
             semaphore = new SimpleSemaphore(getPalantirCount());
-
             lock = new ReentrantLock(false);
-
-            Controller.log(TAG + ": buildModel() called");
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -146,13 +142,9 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
             // TODO -- you fill in here.
         } else if (Assignment.isGraduateTodo()) {
             // TODO -- you fill in here.
-            Controller.log(TAG + ": try semaphore " + Thread.currentThread().getName());
             semaphore.acquire();
-            Controller.log(TAG + ": acquire semaphore " + Thread.currentThread().getName());
             try {
-                Controller.log(TAG + ": try lock " + Thread.currentThread().getName());
                 lock.lock();
-                Controller.log(TAG + ": acquire lock " + Thread.currentThread().getName());
                 Map.Entry<Palantir, Boolean> entry = mPalantiriMap.entrySet().stream()
                         .filter(Map.Entry::getValue)
                         .findAny()
@@ -191,7 +183,6 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
         // in a thread-safe manner and release the SimpleSemaphore if
         // all works properly.
         // TODO -- you fill in here.
-        Controller.log(TAG + ": release a palantir");
         if (palantir == null) {
             return;
         }
@@ -199,7 +190,6 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
             lock.lock();
             mPalantiriMap.put(palantir, true);
             semaphore.release();
-            Controller.log(TAG + ": release semaphore " + Thread.currentThread().getName());
         } finally {
             lock.unlock();
         }
