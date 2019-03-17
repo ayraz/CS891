@@ -33,7 +33,7 @@ class BeingCallable
         runGazingSimulation(getGazingIterations());
 
         // TODO -- replace "null" with the appropriate return value.
-        return null;
+        return this;
     }
 
     /**
@@ -51,6 +51,8 @@ class BeingCallable
         // of time).  Finally, release the palantir for this being via
         // a call to the appropriate base class helper method.
 
-        // TODO -- you fill in here.
+        final Palantir palantir = acquirePalantir();
+        palantir.gaze(this);
+        releasePalantir(palantir);
     }
 }

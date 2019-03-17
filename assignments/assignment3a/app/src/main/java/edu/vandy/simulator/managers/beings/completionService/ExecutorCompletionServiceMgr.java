@@ -1,11 +1,14 @@
 package edu.vandy.simulator.managers.beings.completionService;
 
+import java.util.Optional;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.BinaryOperator;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 import edu.vandy.simulator.Controller;
 import edu.vandy.simulator.managers.beings.BeingManager;
@@ -30,12 +33,14 @@ public class ExecutorCompletionServiceMgr
      * The ExecutorService contains a cached pool of threads.
      */
     // TODO -- you fill in here.
+    private ExecutorService executor;
 
     /**
      * The CompletionService that's associated with the
      * ExecutorService above.
      */
     // TODO -- you fill in here.
+    private CompletionService<BeingCallable> completionService;
 
     /**
      * Default constructor.
@@ -63,7 +68,7 @@ public class ExecutorCompletionServiceMgr
         // Return a new BeingCallable instance.
         // TODO -- you fill in here, replacing null with the
         // appropriate code.
-        return null;
+        return new BeingCallable(this);
     }
 
     /**
@@ -76,13 +81,16 @@ public class ExecutorCompletionServiceMgr
         // a pool of threads that represent the beings in this
         // simulation.
         // TODO -- you fill in here.
+        beginBeingThreadPool();
 
         // Call a method that waits for all futures to complete.
         // TODO -- you fill in here.
+        awaitCompletionOfFutures();
 
         // Call this class's shutdownNow() method to cleanly shutdown
         // the executor service.
         // TODO -- you fill in here.
+        shutdownNow();
     }
 
     /**
@@ -93,7 +101,7 @@ public class ExecutorCompletionServiceMgr
      */
     public ExecutorService createExecutorService() {
         // TODO -- you fill in here (replace null with an executor service instance).
-        return null;
+        return Executors.newCachedThreadPool();
     }
 
     /**
@@ -106,7 +114,7 @@ public class ExecutorCompletionServiceMgr
             ExecutorService executorService) {
         // TODO -- you fill in here (replace null with an executor
         // completion service instance).
-        return null;
+        return new ExecutorCompletionService<>(executorService);
     }
 
     /**
@@ -118,8 +126,11 @@ public class ExecutorCompletionServiceMgr
         // pool of threads.  Call the BeingManager.getBeings() method
         // to iterate through the BeingCallables and submit each
         // BeingCallable to the ExecutorCompletionService.
-
         // TODO -- you fill in here.
+        executor = createExecutorService();
+        completionService = createExecutorCompletionService(executor);
+
+        getBeings().forEach(callable -> completionService.submit(callable));
     }
 
     /**
@@ -145,6 +156,16 @@ public class ExecutorCompletionServiceMgr
             // TODO -- you fill in here.
         } else if (Assignment.isGraduateTodo()) {
             // TODO -- you fill in here.
+            try {
+                Optional<Boolean> allDone = IntStream.range(0, getBeingCount())
+                        .mapToObj(i -> rethrowSupplier(completionService::take).get().isDone())
+                        .reduce((done, done2) -> done && done2);
+                if (allDone.isPresent() && allDone.get()) {
+                    Controller.log("All being callable futures executed successfully!");
+                }
+            } catch (Exception e) {
+                Controller.log("Error during execution occurred.", e);
+            }
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -166,6 +187,7 @@ public class ExecutorCompletionServiceMgr
 
         // Shutdown the executor *now*.
         // TODO -- you fill in here.
+        executor.shutdownNow();
 
         Controller.log(TAG + ": shutdownNow: exited with "
                 + getRunningBeingCount() + "/"

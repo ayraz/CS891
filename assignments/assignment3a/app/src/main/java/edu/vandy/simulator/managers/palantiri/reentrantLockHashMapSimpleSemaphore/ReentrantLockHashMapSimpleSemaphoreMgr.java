@@ -5,15 +5,19 @@ import android.util.Log;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
+import edu.vandy.simulator.Controller;
 import edu.vandy.simulator.managers.palantiri.Palantir;
 import edu.vandy.simulator.managers.palantiri.PalantiriManager;
 import edu.vandy.simulator.utils.Assignment;
+import io.reactivex.internal.operators.completable.CompletableOnErrorComplete;
 
 import static java.util.stream.Collectors.toMap;
 
@@ -42,11 +46,13 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
      * PalantiriManager.
      */
     // TODO -- you fill in here.
+    private SimpleSemaphore semaphore;
 
     /**
      * A Lock used to protect critical sections involving the HashMap.
      */
     // TODO -- you fill in here.
+    private ReentrantLock lock;
 
     /**
      * Resets the fields to their initial values
@@ -67,7 +73,7 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
     SimpleSemaphore getSemaphore() {
         // TODO -- you fill in here, replacing null with the
         // appropriate field.
-        return null;
+        return semaphore;
     }
 
     /**
@@ -99,6 +105,10 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
             // TODO -- you fill in here.
         } else if (Assignment.isGraduateTodo()) {
             // TODO -- you fill in here.
+            mPalantiriMap = new HashMap<>(getPalantirCount());
+            getPalantiri().forEach(palantir -> mPalantiriMap.put(palantir, true));
+            semaphore = new SimpleSemaphore(getPalantirCount());
+            lock = new ReentrantLock(false);
         } else {
             throw new IllegalStateException("Invalid assignment type");
         }
@@ -128,16 +138,24 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
         // Undergraduate students are free to use a Java 8 stream, but
         // it's not required.
 
-        try {
-            if (Assignment.isUndergraduateTodo()) {
-                // TODO -- you fill in here.
-            } else if (Assignment.isGraduateTodo()) {
-                // TODO -- you fill in here.
-            } else {
-                throw new IllegalStateException("Invalid assignment type");
+        if (Assignment.isUndergraduateTodo()) {
+            // TODO -- you fill in here.
+        } else if (Assignment.isGraduateTodo()) {
+            // TODO -- you fill in here.
+            semaphore.acquire();
+            try {
+                lock.lock();
+                Map.Entry<Palantir, Boolean> entry = mPalantiriMap.entrySet().stream()
+                        .filter(Map.Entry::getValue)
+                        .findAny()
+                        .get();
+                entry.setValue(false);
+                return entry.getKey();
+            } finally {
+                lock.unlock();
             }
-        } finally {
-
+        } else {
+            throw new IllegalStateException("Invalid assignment type");
         }
 
         // This invariant should always hold for all acquire()
@@ -148,8 +166,8 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
         // correctly) and return a Palantir, or fail because of
         // cancellation.
         throw new IllegalStateException("This method should either return a valid "
-                + "Palantir or throw a InterruptedException. "
-                + "In either case, this statement should not be reached.");
+                                        + "Palantir or throw a InterruptedException. "
+                                        + "In either case, this statement should not be reached.");
     }
 
     /**
@@ -165,18 +183,28 @@ public class ReentrantLockHashMapSimpleSemaphoreMgr extends PalantiriManager {
         // in a thread-safe manner and release the SimpleSemaphore if
         // all works properly.
         // TODO -- you fill in here.
+        if (palantir == null) {
+            return;
+        }
+        try {
+            lock.lock();
+            mPalantiriMap.put(palantir, true);
+            semaphore.release();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
      * This method is just intended for use by the regression tests,
      * not by applications.
      *
-     * @return the number of available permits on the semaphore.
+     * @return the number of available mPermits on the semaphore.
      */
     @Override
     protected int availablePermits() {
         // TODO -- replace 0 with the appropriate method call.
-        return 0;
+        return semaphore.availablePermits();
     }
 
     /**
