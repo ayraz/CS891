@@ -5,6 +5,8 @@ import android.util.Log;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -85,6 +87,8 @@ public class ConcurrentMapFairSemaphoreMgr
         // a FairSemaphoreMO.
 
         // TODO -- you fill in here.
+        mPalantiriMap = new ConcurrentHashMap<>(getPalantirCount());
+        getPalantiri().forEach(p -> mPalantiriMap.put(p, true));
 
         // Initialize the Semaphore to use a "fair" implementation
         // that mediates concurrent access to the given Palantiri.
@@ -92,6 +96,7 @@ public class ConcurrentMapFairSemaphoreMgr
         // students must use a FairSemaphoreMO.
         if (Assignment.isUndergraduateTodo()) {
         } else if (Assignment.isGraduateTodo()) {
+            mAvailablePalantiri = new FairSemaphoreCO(getPalantirCount());
         }
     }
 
@@ -110,6 +115,17 @@ public class ConcurrentMapFairSemaphoreMgr
         // and then return that palantir to the client.  There should
         // be *no* synchronizers in this method.
         // TODO -- you fill in here.
+        try {
+            mAvailablePalantiri.acquire();
+            Map.Entry<Palantir, Boolean> entry = mPalantiriMap.entrySet().stream()
+                    .filter(Map.Entry::getValue)
+                    .findAny()
+                    .get();
+            mPalantiriMap.replace(entry.getKey(), false);
+            return entry.getKey();
+        } catch (InterruptedException e) {
+            throw new CancellationException(e.getMessage());
+        }
     }
 
     /**
@@ -124,6 +140,12 @@ public class ConcurrentMapFairSemaphoreMgr
         // properly.  There should be *no* synchronizers in this
         // method.
         // TODO -- you fill in here.
+        if (palantir != null) {
+            boolean replaced = mPalantiriMap.replace(palantir, false, true);
+            if (replaced) {
+                mAvailablePalantiri.release();
+            }
+        }
     }
 
     /*
