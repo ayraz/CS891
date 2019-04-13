@@ -70,8 +70,9 @@ public class FairSemaphoreMO
         // First try the "fast path" where the method doesn't need to
         // block if the queue is empty and permits are available.
         //
-        // TODO -- you fill in here (replacing false with the
+        // TODO -- you fill in here (replace false with the
         // appropriate code).
+        return false;
     }
 
     /**
@@ -84,9 +85,9 @@ public class FairSemaphoreMO
     protected boolean tryToGetPermitUnlocked() {
         // We don't need to wait if the queue is empty and
         // permits are available.
-        //
-        // TODO -- you fill in here (replacing false with the
+        // TODO -- you fill in here (replace false with the
         // appropriate code).
+        return false;
     }
 
     /**
