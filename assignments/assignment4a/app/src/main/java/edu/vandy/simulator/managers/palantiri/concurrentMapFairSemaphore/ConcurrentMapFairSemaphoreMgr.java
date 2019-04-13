@@ -94,10 +94,7 @@ public class ConcurrentMapFairSemaphoreMgr
         // that mediates concurrent access to the given Palantiri.
         // Grad students must use a FairSemaphoreCO, whereas ugrad
         // students must use a FairSemaphoreMO.
-        if (Assignment.isUndergraduateTodo()) {
-        } else if (Assignment.isGraduateTodo()) {
-            mAvailablePalantiri = new FairSemaphoreCO(getPalantirCount());
-        }
+        mAvailablePalantiri = new FairSemaphoreCO(getPalantirCount());
     }
 
     /**
