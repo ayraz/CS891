@@ -2,6 +2,8 @@ package edu.vandy.simulator.managers.beings.asyncTask;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -29,18 +31,22 @@ public class AsyncTaskMgr
      * are allocated dynamically and cached.
      */
     // TODO -- you fill in here.
+    private ThreadPoolExecutor executor;
 
     /**
      * A CyclicBarrier entry barrier that ensures all background
      * threads start running at the same time.
      */
     // TODO -- you fill in here.
+    private CyclicBarrier mEntryBarrier;
 
     /**
      * A CountDownLatch exit barrier that ensures the waiter thread
      * doesn't finish until all the async tasks finish.
      */
     // TODO -- you fill in here.
+    private CountDownLatch mExitBarrier;
+
 
     /**
      * A ThreadFactory that spawns an appropriately named thread for
@@ -63,7 +69,7 @@ public class AsyncTaskMgr
                 // Use the mId field to ensure each new thread is
                 // given a unique name.
                 // TODO -- you fill in here by replacing "return null".
-                return null;
+                return new Thread(runnable, "Being #" + mId.getAndIncrement());
             }
     };
 
@@ -93,7 +99,7 @@ public class AsyncTaskMgr
         // Return a new AsyncBeing instance.
         // TODO -- you fill in here, replacing null with the
         // appropriate code.
-        return null;
+        return new AsyncBeing(this);
     }
 
     /**
@@ -105,12 +111,15 @@ public class AsyncTaskMgr
         // Use the ThreadPoolExecutor to create and execute an async
         // task for each being.
         // TODO -- you fill in here.
+        beginAsyncTasksGazing();
 
         // Wait for all the beings to finish gazing at the palantiri.
         // TODO -- you fill in here.
+        waitForAsyncTasksToFinishGazing();
 
         // Call the shutdownNow() method to cleanly shutdown.
         // TODO -- you fill in here.
+        shutdownNow();
     }
 
     /**
@@ -124,10 +133,12 @@ public class AsyncTaskMgr
         // Initialize an entry barrier that ensures all async tasks
         // start running at the same time.
         // TODO -- you fill in here.
+        mEntryBarrier = new CyclicBarrier(beingCount + 1);
 
         // Initialize an exit barrier to ensure the waiter thread
         // doesn't finish until all the async tasks finish.
         // TODO -- you fill in here.
+        mExitBarrier = new CountDownLatch(beingCount);
 
         // Create a ThreadPoolExecutor containing a pool of no more
         // than beingCount threads that are allocated dynamically and
@@ -135,12 +146,15 @@ public class AsyncTaskMgr
         // SynchronousQueue should be used as the work queue and
         // mThreadFactory should be passed as the final parameter.
         // TODO -- you fill in here.
+        executor = new ThreadPoolExecutor(0, beingCount, 60, TimeUnit.SECONDS,
+                new SynchronousQueue<>(), mThreadFactory);
 
         // Execute all the async tasks on mThreadPoolExecutor,
         // passing in the entry and exit barriers.
         // TODO -- you fill in here.  Graduate students must use Java
         // 8 features, whereas undergraduate students can optionally
         // use Java 8 features.
+        getBeings().forEach(being -> being.executeOnExecutor(mEntryBarrier, mExitBarrier, executor));
     }
 
     /**
@@ -152,15 +166,18 @@ public class AsyncTaskMgr
         try {
             // Allow all the async tasks to start gazing.
             // TODO -- you fill in here.
+            mEntryBarrier.await();
 
             // Wait for all async tasks to stop gazing.
             // TODO -- you fill in here.
+            mExitBarrier.await();
         } catch (Exception e) {
             Controller.log(TAG +
                            ": awaitTerminationOfThreadPoolExecutor() caught exception: "
                            + e);
             // Shutdown the simulation now.
             // TODO -- you fill in here.
+            shutdownNow();
         }
 
         // Print the number of beings that were processed.
@@ -181,14 +198,16 @@ public class AsyncTaskMgr
     public void shutdownNow() {
         Controller.log(TAG + ": shutdownNow: entered");
 
-        // Cancel all the outstanding async tasks immediately.  
+        // Cancel all the outstanding async tasks immediately.
 
         // TODO -- you fill in here.  Graduate students must use Java
         // 8 features, whereas undergraduate students can optionally
         // use Java 8 features.
+        getBeings().forEach(being -> being.cancel(true));
 
         // Shutdown the executor *now*.
         // TODO -- you fill in here.
+        executor.shutdownNow();
 
         Controller.log(TAG + ": shutdownNow: exited with "
                 + getRunningBeingCount() + "/"
